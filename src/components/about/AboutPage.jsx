@@ -36,9 +36,14 @@ export default function AboutPage() {
             brasileiro diferente, porque ciência e natureza andam juntas.
           </p>
           <p>
-            Seus dados ficam salvos localmente no navegador (localStorage). Nada é enviado
-            para servidores externos. Você pode exportar e importar seus dados em JSON a
-            qualquer momento.
+            Seus dados ficam salvos localmente no navegador (localStorage). Você pode
+            exportar e importar seus dados em JSON a qualquer momento.
+          </p>
+          <p>
+            Para <strong>persistência permanente</strong>, configure um GitHub Personal
+            Access Token no botão <strong>☁️ Sync GitHub</strong> no topo da página.
+            Os logs serão salvos automaticamente como <code className="bg-gray-100 px-1 rounded text-xs">data/logs.json</code> no
+            repositório, com versionamento completo no git.
           </p>
         </div>
       </div>
@@ -84,7 +89,7 @@ export default function AboutPage() {
           <span>💻</span> Stack Tecnológica
         </h2>
         <div className="flex flex-wrap gap-2">
-          {['React', 'Vite', 'Tailwind CSS', 'Recharts', 'React Router', 'localStorage'].map(tech => (
+          {['React', 'Vite', 'Tailwind CSS', 'Recharts', 'React Router', 'localStorage', 'GitHub API'].map(tech => (
             <span
               key={tech}
               className="bg-atlantica-50 text-atlantica-700 px-3 py-1.5 rounded-lg text-sm font-semibold"
