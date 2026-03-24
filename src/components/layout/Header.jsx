@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
+import GitHubSyncButton from '../shared/GitHubSyncButton'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Arquivo', icon: '🗂️' },
@@ -30,7 +31,7 @@ export default function Header() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1 flex-wrap">
           {NAV_ITEMS.map(item => {
             const isActive = item.to === '/'
               ? location.pathname === '/'
@@ -50,6 +51,7 @@ export default function Header() {
               </Link>
             )
           })}
+          <GitHubSyncButton />
         </nav>
 
         {/* Mobile hamburger */}
@@ -65,6 +67,9 @@ export default function Header() {
       {/* Mobile nav dropdown */}
       {mobileOpen && (
         <nav className="md:hidden border-t border-gray-100 bg-white px-4 py-2 space-y-1">
+          <div className="flex justify-end py-1 border-b border-gray-50 mb-1">
+            <GitHubSyncButton />
+          </div>
           {NAV_ITEMS.map(item => {
             const isActive = item.to === '/'
               ? location.pathname === '/'
