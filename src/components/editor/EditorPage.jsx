@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useEntries } from '../../hooks/useEntries'
 import { useDraft } from '../../hooks/useDraft'
 import { useToast } from '../shared/Toast'
-import { formatDatePT } from '../../utils/dateUtils'
+import { formatDatePT, daysAgo } from '../../utils/dateUtils'
 import { randomFrom, SAVE_MESSAGES } from '../../utils/humor'
 import TodoSection from './TodoSection'
 import PesquisaSection from './PesquisaSection'
@@ -37,12 +37,24 @@ export default function EditorPage() {
     })
   }, [scheduleAutoSave])
 
-  function handleSave() {
-    upsertEntry(entry)
-    saveNow(entry)
-    discardDraft()
+  const handleSave = useCallback(() => {
+    setEntry(current => {
+      upsertEntry(current)
+      saveNow(current)
+      discardDraft()
+      return current
+    })
     showToast(randomFrom(SAVE_MESSAGES))
-  }
+  }, [upsertEntry, saveNow, discardDraft, showToast])
+
+  const handleBack = useCallback(() => {
+    if (draftStatus === 'unsaved') {
+      if (window.confirm('Rascunho não salvo! Deseja salvar antes de sair?')) {
+        handleSave()
+      }
+    }
+    navigate('/')
+  }, [draftStatus, handleSave, navigate])
 
   function handleDelete() {
     if (window.confirm('Tem certeza? Essa ação vai desmatar essa entrada permanentemente 🌳')) {
@@ -53,14 +65,51 @@ export default function EditorPage() {
     }
   }
 
-  function handleBack() {
-    if (draftStatus === 'unsaved') {
-      if (window.confirm('Rascunho não salvo! Deseja salvar antes de sair?')) {
+  // Keyboard shortcuts: Ctrl+S / Cmd+S to save, Escape to go back
+  useEffect(() => {
+    function onKeyDown(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
         handleSave()
+        return
+      }
+      if (e.key === 'Escape') {
+        const tag = document.activeElement?.tagName
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+          handleBack()
+        }
       }
     }
-    navigate('/')
-  }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleSave, handleBack])
+
+  const carryForwardTodos = useCallback(() => {
+    setEntry(current => {
+      const existingTexts = new Set((current.todos || []).map(t => t.text))
+      const carried = []
+      for (let i = 1; i <= 7; i++) {
+        const pastEntry = getEntry(daysAgo(i))
+        if (!pastEntry) continue
+        const incomplete = (pastEntry.todos || []).filter(t => !t.done)
+        for (const t of incomplete) {
+          if (!existingTexts.has(t.text)) {
+            existingTexts.add(t.text)
+            carried.push({ text: t.text, done: false })
+          }
+        }
+        if (carried.length > 0) break
+      }
+      if (carried.length > 0) {
+        const next = { ...current, todos: [...(current.todos || []), ...carried] }
+        scheduleAutoSave(next)
+        showToast(`${carried.length} tarefa${carried.length > 1 ? 's' : ''} trazida${carried.length > 1 ? 's' : ''} 📋`)
+        return next
+      }
+      showToast('Nenhuma tarefa incompleta encontrada nos últimos 7 dias')
+      return current
+    })
+  }, [getEntry, scheduleAutoSave, showToast])
 
   // Determine capybara state
   const todosDone = (entry.todos || []).filter(t => t.done).length
@@ -114,7 +163,11 @@ export default function EditorPage() {
       {/* Sections */}
       <div className="space-y-5">
         <div className="fade-up fade-up-delay-1">
-          <TodoSection todos={entry.todos || []} onChange={v => updateField('todos', v)} />
+          <TodoSection
+            todos={entry.todos || []}
+            onChange={v => updateField('todos', v)}
+            onCarryForward={carryForwardTodos}
+          />
         </div>
         <div className="fade-up fade-up-delay-2">
           <PesquisaSection value={entry.pesquisa || ''} onChange={v => updateField('pesquisa', v)} />

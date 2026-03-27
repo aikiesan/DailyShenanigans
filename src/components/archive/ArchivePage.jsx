@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
+import { useState, useMemo } from 'react'
 import { useEntries } from '../../hooks/useEntries'
-import { todayISO } from '../../utils/dateUtils'
+import { todayISO, daysAgo, formatDateShort } from '../../utils/dateUtils'
 import { calculateStreak } from '../../utils/statsCalculations'
 import { getStreakMessage, randomFrom, SAVE_MESSAGES } from '../../utils/humor'
 import { useToast } from '../shared/Toast'
@@ -8,13 +9,15 @@ import EntryCard from './EntryCard'
 import CalendarHeatmap from './CalendarHeatmap'
 import EmptyState from '../shared/EmptyState'
 import CapybaraReaction from '../shared/CapybaraReaction'
-import { useMemo } from 'react'
 
 export default function ArchivePage() {
-  const { entries, exportJSON, importJSON } = useEntries()
+  const { entries, exportJSON, importJSON, upsertEntry, createEmptyEntry, getEntry } = useEntries()
   const navigate = useNavigate()
   const showToast = useToast()
   const streak = useMemo(() => calculateStreak(entries), [entries])
+
+  const [quickNote, setQuickNote] = useState('')
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false)
 
   const capyState = useMemo(() => {
     if (entries.length === 0) return 'sleepy'
@@ -24,6 +27,19 @@ export default function ArchivePage() {
   }, [entries.length, streak])
 
   const streakMsg = useMemo(() => getStreakMessage(streak), [streak])
+
+  // Last 7 days for quick navigation pills
+  const recentDays = useMemo(() => {
+    const entryDates = new Set(entries.map(e => e.date))
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = daysAgo(i)
+      return {
+        date,
+        label: i === 0 ? 'Hoje' : i === 1 ? 'Ontem' : formatDateShort(date),
+        hasEntry: entryDates.has(date),
+      }
+    })
+  }, [entries])
 
   function handleNewEntry() {
     navigate(`/entry/${todayISO()}`)
@@ -41,6 +57,32 @@ export default function ArchivePage() {
   function handleExport() {
     exportJSON()
     showToast(randomFrom(SAVE_MESSAGES))
+  }
+
+  function handleDatePick(e) {
+    const val = e.target.value
+    if (val) navigate(`/entry/${val}`)
+  }
+
+  function saveQuickNote() {
+    const text = quickNote.trim()
+    if (!text) return
+    const today = todayISO()
+    const existing = getEntry(today) || createEmptyEntry(today)
+    const updated = {
+      ...existing,
+      notas: existing.notas ? `${existing.notas}\n${text}` : text,
+    }
+    upsertEntry(updated)
+    setQuickNote('')
+    showToast('Nota salva! 📝')
+  }
+
+  function handleQuickNoteKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      saveQuickNote()
+    }
   }
 
   return (
@@ -64,6 +106,8 @@ export default function ArchivePage() {
             {streakMsg && (
               <p className="text-sm text-gray-500 mt-1 italic">{streakMsg}</p>
             )}
+
+            {/* Action buttons + date picker */}
             <div className="mt-4 flex flex-wrap gap-3 justify-center md:justify-start">
               <button
                 onClick={handleNewEntry}
@@ -71,6 +115,13 @@ export default function ArchivePage() {
               >
                 🌱 Hoje ({todayISO().split('-').reverse().join('/')})
               </button>
+              <input
+                type="date"
+                onChange={handleDatePick}
+                max={todayISO()}
+                className="bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-600 font-semibold px-4 py-2.5 rounded-xl transition-all hover:bg-gray-50 cursor-pointer"
+                title="Ir para uma data específica"
+              />
               <button
                 onClick={handleImport}
                 className="bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-600 font-semibold px-4 py-2.5 rounded-xl transition-all hover:bg-gray-50"
@@ -84,7 +135,55 @@ export default function ArchivePage() {
                 📤 Exportar
               </button>
             </div>
+
+            {/* Recent days pills */}
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+              {recentDays.map(({ date, label, hasEntry }) => (
+                <button
+                  key={date}
+                  onClick={() => navigate(`/entry/${date}`)}
+                  className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold border-2 transition-all ${
+                    hasEntry
+                      ? 'bg-amazonia-50 border-amazonia-300 text-amazonia-700 hover:bg-amazonia-100'
+                      : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  {hasEntry && <span>✓</span>}
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+        </div>
+
+        {/* Quick note panel */}
+        <div className="mt-5 border-t border-gray-100 pt-4">
+          <button
+            onClick={() => setQuickNoteOpen(o => !o)}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <span>{quickNoteOpen ? '▾' : '▸'}</span>
+            <span>Nota rápida</span>
+          </button>
+          {quickNoteOpen && (
+            <div className="mt-3 flex gap-2">
+              <input
+                type="text"
+                value={quickNote}
+                onChange={e => setQuickNote(e.target.value)}
+                onKeyDown={handleQuickNoteKeyDown}
+                placeholder="Adicionar nota de hoje... (Enter para salvar)"
+                className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-amazonia-400 focus:outline-none bg-white text-sm font-medium placeholder-gray-300 transition-colors"
+                autoFocus
+              />
+              <button
+                onClick={saveQuickNote}
+                className="bg-amazonia-500 hover:bg-amazonia-600 text-white font-bold px-5 py-2.5 rounded-xl transition-colors active:scale-95 shadow-sm"
+              >
+                Salvar
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

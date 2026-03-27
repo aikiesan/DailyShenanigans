@@ -4,6 +4,8 @@ import EmptyState from '../shared/EmptyState'
 
 export default function ConquistasSection({ conquistas, onChange }) {
   const [newItem, setNewItem] = useState('')
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [editText, setEditText] = useState('')
 
   function addConquista() {
     const text = newItem.trim()
@@ -18,6 +20,31 @@ export default function ConquistasSection({ conquistas, onChange }) {
 
   function handleKeyDown(e) {
     if (e.key === 'Enter') addConquista()
+  }
+
+  function startEdit(index) {
+    setEditingIndex(index)
+    setEditText(conquistas[index])
+  }
+
+  function commitEdit() {
+    if (editingIndex === null) return
+    const text = editText.trim()
+    if (text) {
+      onChange(conquistas.map((c, i) => i === editingIndex ? text : c))
+    }
+    setEditingIndex(null)
+    setEditText('')
+  }
+
+  function cancelEdit() {
+    setEditingIndex(null)
+    setEditText('')
+  }
+
+  function handleEditKeyDown(e) {
+    if (e.key === 'Enter') commitEdit()
+    else if (e.key === 'Escape') cancelEdit()
   }
 
   return (
@@ -49,10 +76,22 @@ export default function ConquistasSection({ conquistas, onChange }) {
               className="bg-pantanal-100 text-pantanal-700 px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 group"
             >
               <span>⭐</span>
-              <span>{item}</span>
+              {editingIndex === i ? (
+                <input
+                  type="text"
+                  value={editText}
+                  onChange={e => setEditText(e.target.value)}
+                  onKeyDown={handleEditKeyDown}
+                  onBlur={commitEdit}
+                  autoFocus
+                  className="text-sm font-medium px-1 py-0.5 rounded border-2 border-pantanal-400 focus:outline-none bg-white text-pantanal-700 w-40"
+                />
+              ) : (
+                <span onClick={() => startEdit(i)} className="cursor-text">{item}</span>
+              )}
               <button
                 onClick={() => deleteConquista(i)}
-                className="opacity-0 group-hover:opacity-100 text-pantanal-400 hover:text-red-500 transition-all ml-1"
+                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-pantanal-400 hover:text-red-500 transition-all ml-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 ✕
               </button>

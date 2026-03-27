@@ -3,8 +3,10 @@ import BiomeCard from '../shared/BiomeCard'
 import EmptyState from '../shared/EmptyState'
 import { randomFrom, TODO_COMPLETED_MESSAGES } from '../../utils/humor'
 
-export default function TodoSection({ todos, onChange }) {
+export default function TodoSection({ todos, onChange, onCarryForward }) {
   const [newTodo, setNewTodo] = useState('')
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [editText, setEditText] = useState('')
   const allDone = todos.length > 0 && todos.every(t => t.done)
   const doneCount = todos.filter(t => t.done).length
 
@@ -28,6 +30,31 @@ export default function TodoSection({ todos, onChange }) {
     if (e.key === 'Enter') addTodo()
   }
 
+  function startEdit(index) {
+    setEditingIndex(index)
+    setEditText(todos[index].text)
+  }
+
+  function commitEdit() {
+    if (editingIndex === null) return
+    const text = editText.trim()
+    if (text) {
+      onChange(todos.map((t, i) => i === editingIndex ? { ...t, text } : t))
+    }
+    setEditingIndex(null)
+    setEditText('')
+  }
+
+  function cancelEdit() {
+    setEditingIndex(null)
+    setEditText('')
+  }
+
+  function handleEditKeyDown(e) {
+    if (e.key === 'Enter') commitEdit()
+    else if (e.key === 'Escape') cancelEdit()
+  }
+
   return (
     <BiomeCard biomeKey="cerrado" title="Lista de Tarefas" icon="✅">
       {/* Input */}
@@ -40,6 +67,15 @@ export default function TodoSection({ todos, onChange }) {
           placeholder="Nova tarefa para o bioma..."
           className="flex-1 px-4 py-2.5 rounded-xl border-2 border-cerrado-200 focus:border-cerrado-400 focus:outline-none bg-white text-sm font-medium placeholder-cerrado-300 transition-colors"
         />
+        {onCarryForward && (
+          <button
+            onClick={onCarryForward}
+            className="bg-cerrado-100 hover:bg-cerrado-200 text-cerrado-700 font-bold px-3 py-2.5 rounded-xl transition-colors active:scale-95 shadow-sm"
+            title="Trazer tarefas incompletas de dias anteriores"
+          >
+            📋
+          </button>
+        )}
         <button
           onClick={addTodo}
           className="bg-cerrado-500 hover:bg-cerrado-600 text-white font-bold px-5 py-2.5 rounded-xl transition-colors active:scale-95 shadow-sm"
@@ -90,14 +126,29 @@ export default function TodoSection({ todos, onChange }) {
               >
                 {todo.done && '✓'}
               </button>
-              <span className={`text-sm font-medium flex-1 transition-all ${
-                todo.done ? 'line-through text-gray-400' : 'text-gray-700'
-              }`}>
-                {todo.text}
-              </span>
+              {editingIndex === i ? (
+                <input
+                  type="text"
+                  value={editText}
+                  onChange={e => setEditText(e.target.value)}
+                  onKeyDown={handleEditKeyDown}
+                  onBlur={commitEdit}
+                  autoFocus
+                  className="flex-1 text-sm font-medium px-2 py-0.5 rounded border-2 border-cerrado-400 focus:outline-none bg-white"
+                />
+              ) : (
+                <span
+                  onClick={() => startEdit(i)}
+                  className={`text-sm font-medium flex-1 transition-all cursor-text ${
+                    todo.done ? 'line-through text-gray-400' : 'text-gray-700'
+                  }`}
+                >
+                  {todo.text}
+                </span>
+              )}
               <button
                 onClick={() => deleteTodo(i)}
-                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all text-sm p-1"
+                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all text-sm min-w-[44px] min-h-[44px] flex items-center justify-center"
                 title="Remover"
               >
                 ✕
