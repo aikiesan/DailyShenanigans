@@ -28,18 +28,21 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signIn = useCallback(async (email, password) => {
+    if (!supabase) throw new Error('Supabase não configurado. Verifique as variáveis de ambiente.')
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
     return data
   }, [])
 
   const signUp = useCallback(async (email, password) => {
+    if (!supabase) throw new Error('Supabase não configurado. Verifique as variáveis de ambiente.')
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
     return data
   }, [])
 
   const signOut = useCallback(async () => {
+    if (!supabase) return
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   }, [])
