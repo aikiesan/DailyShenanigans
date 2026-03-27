@@ -10,23 +10,11 @@ export async function fetchAllEntries() {
   return (data || []).map(normalizeEntry)
 }
 
-export async function upsertEntryRemote(entry, userId) {
+export async function upsertEntryRemote(entry) {
   if (!isSupabaseConfigured()) return
-  const row = {
-    id: entry.id || entry.date,
-    date: entry.date,
-    todos: entry.todos || [],
-    pesquisa: entry.pesquisa || '',
-    dev: entry.dev || '',
-    notas: entry.notas || '',
-    conquistas: entry.conquistas || [],
-    mood: entry.mood || '',
-    tags: entry.tags || [],
-    user_id: userId,
-  }
   const { error } = await supabase
     .from('entries')
-    .upsert(row, { onConflict: 'id' })
+    .upsert(entryToRow(entry), { onConflict: 'id' })
   if (error) throw error
 }
 
@@ -39,9 +27,16 @@ export async function deleteEntryRemote(id) {
   if (error) throw error
 }
 
-export async function pushAllEntries(entries, userId) {
+export async function pushAllEntries(entries) {
   if (!isSupabaseConfigured() || entries.length === 0) return
-  const rows = entries.map(entry => ({
+  const { error } = await supabase
+    .from('entries')
+    .upsert(entries.map(entryToRow), { onConflict: 'id' })
+  if (error) throw error
+}
+
+function entryToRow(entry) {
+  return {
     id: entry.id || entry.date,
     date: entry.date,
     todos: entry.todos || [],
@@ -51,15 +46,9 @@ export async function pushAllEntries(entries, userId) {
     conquistas: entry.conquistas || [],
     mood: entry.mood || '',
     tags: entry.tags || [],
-    user_id: userId,
-  }))
-  const { error } = await supabase
-    .from('entries')
-    .upsert(rows, { onConflict: 'id' })
-  if (error) throw error
+  }
 }
 
-// Strip Supabase-only fields (user_id, timestamps) from entry for app use
 function normalizeEntry(row) {
   return {
     id: row.id,

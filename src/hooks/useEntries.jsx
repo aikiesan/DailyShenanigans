@@ -3,17 +3,15 @@ import { loadEntries, saveEntries, exportToJSON, importFromJSON, mergeEntries, c
 import { getGhToken, saveGhToken, fetchLogsFromGitHub, pushLogsToGitHub } from '../utils/github'
 import { fetchAllEntries, upsertEntryRemote, deleteEntryRemote, pushAllEntries } from '../utils/supabase'
 import { isSupabaseConfigured } from '../utils/supabaseClient'
-import { useAuth } from './useAuth'
 
 const EntriesContext = createContext(null)
 
 export function EntriesProvider({ children }) {
-  const { user } = useAuth()
   const [entries, setEntries] = useState(() => loadEntries())
   const [ghToken, setGhTokenState] = useState(getGhToken)
-  const [syncStatus, setSyncStatus] = useState('idle') // 'idle'|'loading'|'saving'|'synced'|'error'
+  const [syncStatus, setSyncStatus] = useState('idle')
   const [syncError, setSyncError] = useState(null)
-  const [supabaseStatus, setSupabaseStatus] = useState('idle') // 'idle'|'loading'|'synced'|'error'|'offline'
+  const [supabaseStatus, setSupabaseStatus] = useState('idle')
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const shaRef = useRef(null)
   const pushTimerRef = useRef(null)
@@ -23,7 +21,9 @@ export function EntriesProvider({ children }) {
 
   // Online/offline detection
   useEffect(() => {
-    const goOnline = () => setIsOnline(true)
+    const goOnline = () => {
+      setIsOnline(true)
+    }
     const goOffline = () => {
       setIsOnline(false)
       if (isSupabaseConfigured()) setSupabaseStatus('offline')
@@ -41,9 +41,9 @@ export function EntriesProvider({ children }) {
     saveEntries(entries)
   }, [entries])
 
-  // Supabase: pull on mount when authenticated + migrate localStorage data
+  // Supabase: pull on mount, migrate localStorage data if needed
   useEffect(() => {
-    if (!user || !isSupabaseConfigured() || initialSyncDone.current) return
+    if (!isSupabaseConfigured() || initialSyncDone.current) return
     let cancelled = false
     setSupabaseStatus('loading')
 
@@ -51,30 +51,26 @@ export function EntriesProvider({ children }) {
       .then(async (remote) => {
         if (cancelled) return
         initialSyncDone.current = true
-
         const local = loadEntries()
 
         if (remote.length === 0 && local.length > 0) {
-          // First time: migrate localStorage entries to Supabase
+          // First time: migrate localStorage to Supabase
           try {
-            await pushAllEntries(local, user.id)
+            await pushAllEntries(local)
             setSupabaseStatus('synced')
           } catch {
             setSupabaseStatus('error')
           }
         } else if (remote.length > 0) {
-          // Merge remote + local (remote takes priority for existing, local adds new)
+          // Merge remote (source of truth) with local
           const merged = mergeRemoteLocal(remote, local)
           skipNextPushRef.current = true
           setEntries(merged)
-
           // Push any local-only entries to Supabase
           const remoteIds = new Set(remote.map(e => e.id || e.date))
           const localOnly = local.filter(e => !remoteIds.has(e.id || e.date))
           if (localOnly.length > 0) {
-            try {
-              await pushAllEntries(localOnly, user.id)
-            } catch { /* best effort */ }
+            pushAllEntries(localOnly).catch(() => {})
           }
           setSupabaseStatus('synced')
         } else {
@@ -86,19 +82,18 @@ export function EntriesProvider({ children }) {
       })
 
     return () => { cancelled = true }
-  }, [user])
+  }, [])
 
   // Re-sync when coming back online
   useEffect(() => {
-    if (isOnline && user && isSupabaseConfigured() && initialSyncDone.current) {
-      setSupabaseStatus('loading')
-      pushAllEntries(entries, user.id)
-        .then(() => setSupabaseStatus('synced'))
-        .catch(() => setSupabaseStatus('error'))
-    }
+    if (!isOnline || !isSupabaseConfigured() || !initialSyncDone.current) return
+    setSupabaseStatus('loading')
+    pushAllEntries(entries)
+      .then(() => setSupabaseStatus('synced'))
+      .catch(() => setSupabaseStatus('error'))
   }, [isOnline]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // GitHub: pull on mount (or when token changes)
+  // GitHub: pull on mount when token set
   useEffect(() => {
     if (!ghToken) return
     let cancelled = false
@@ -122,19 +117,17 @@ export function EntriesProvider({ children }) {
     return () => { cancelled = true }
   }, [ghToken])
 
-  // Debounced push to Supabase
   const scheduleSupabasePush = useCallback((entry) => {
-    if (!user || !isSupabaseConfigured() || !isOnline) return
+    if (!isSupabaseConfigured() || !isOnline) return
     clearTimeout(supabasePushTimerRef.current)
     supabasePushTimerRef.current = setTimeout(() => {
       setSupabaseStatus('saving')
-      upsertEntryRemote(entry, user.id)
+      upsertEntryRemote(entry)
         .then(() => setSupabaseStatus('synced'))
         .catch(() => setSupabaseStatus('error'))
     }, 1500)
-  }, [user, isOnline])
+  }, [isOnline])
 
-  // Debounced push to GitHub
   const schedulePush = useCallback((entriesToPush) => {
     clearTimeout(pushTimerRef.current)
     pushTimerRef.current = setTimeout(() => {
@@ -170,7 +163,6 @@ export function EntriesProvider({ children }) {
       if (ghToken) schedulePush(sorted)
       return sorted
     })
-    // Supabase push (debounced)
     scheduleSupabasePush(entry)
   }, [ghToken, schedulePush, scheduleSupabasePush])
 
@@ -180,11 +172,10 @@ export function EntriesProvider({ children }) {
       if (ghToken) schedulePush(next)
       return next
     })
-    // Supabase delete (immediate)
-    if (user && isSupabaseConfigured() && isOnline) {
+    if (isSupabaseConfigured() && isOnline) {
       deleteEntryRemote(date).catch(() => setSupabaseStatus('error'))
     }
-  }, [ghToken, schedulePush, user, isOnline])
+  }, [ghToken, schedulePush, isOnline])
 
   const handleExport = useCallback(() => {
     exportToJSON(entries)
@@ -197,12 +188,11 @@ export function EntriesProvider({ children }) {
       if (ghToken) schedulePush(merged)
       return merged
     })
-    // Push imported entries to Supabase
-    if (user && isSupabaseConfigured() && isOnline) {
-      pushAllEntries(imported, user.id).catch(() => setSupabaseStatus('error'))
+    if (isSupabaseConfigured() && isOnline) {
+      pushAllEntries(imported).catch(() => setSupabaseStatus('error'))
     }
     return imported.length
-  }, [ghToken, schedulePush, user, isOnline])
+  }, [ghToken, schedulePush, isOnline])
 
   const updateGhToken = useCallback((token) => {
     saveGhToken(token)
@@ -228,15 +218,15 @@ export function EntriesProvider({ children }) {
   }, [ghToken, entries])
 
   const syncSupabaseNow = useCallback(async () => {
-    if (!user || !isSupabaseConfigured()) return
+    if (!isSupabaseConfigured()) return
     setSupabaseStatus('loading')
     try {
-      await pushAllEntries(entries, user.id)
+      await pushAllEntries(entries)
       setSupabaseStatus('synced')
     } catch {
       setSupabaseStatus('error')
     }
-  }, [user, entries])
+  }, [entries])
 
   const value = {
     entries,
@@ -269,12 +259,9 @@ export function useEntries() {
   return ctx
 }
 
-// Merge remote (Supabase) and local entries, preferring remote for conflicts
 function mergeRemoteLocal(remote, local) {
   const map = new Map()
-  // Local first (lower priority)
   local.forEach(e => map.set(e.id || e.date, e))
-  // Remote overwrites (higher priority - it's the source of truth)
   remote.forEach(e => map.set(e.id || e.date, e))
   return [...map.values()].sort((a, b) => (b.date || b.id).localeCompare(a.date || a.id))
 }
