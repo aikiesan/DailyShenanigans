@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
+import { useAuth } from '../../hooks/useAuth'
 import GitHubSyncButton from '../shared/GitHubSyncButton'
+import SyncStatus from '../shared/SyncStatus'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Arquivo', icon: '🗂️' },
@@ -10,6 +12,7 @@ const NAV_ITEMS = [
 
 export default function Header() {
   const location = useLocation()
+  const { signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -51,7 +54,15 @@ export default function Header() {
               </Link>
             )
           })}
+          <SyncStatus />
           <GitHubSyncButton />
+          <button
+            onClick={signOut}
+            title="Sair"
+            className="px-3 py-1.5 rounded-xl text-xs font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+          >
+            Sair
+          </button>
         </nav>
 
         {/* Mobile hamburger */}
@@ -67,8 +78,15 @@ export default function Header() {
       {/* Mobile nav dropdown */}
       {mobileOpen && (
         <nav className="md:hidden border-t border-gray-100 bg-white px-4 py-2 space-y-1">
-          <div className="flex justify-end py-1 border-b border-gray-50 mb-1">
+          <div className="flex justify-end items-center gap-2 py-1 border-b border-gray-50 mb-1">
+            <SyncStatus />
             <GitHubSyncButton />
+            <button
+              onClick={signOut}
+              className="px-3 py-1.5 rounded-xl text-xs font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+            >
+              Sair
+            </button>
           </div>
           {NAV_ITEMS.map(item => {
             const isActive = item.to === '/'
