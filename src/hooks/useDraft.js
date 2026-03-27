@@ -27,12 +27,29 @@ export function useDraft(date) {
     timerRef.current = setTimeout(() => {
       saveDraft(date, entry)
       setDraftStatus('saved')
-    }, 30000)
+      timerRef.current = null
+    }, 3000)
   }, [date])
 
   const discardDraft = useCallback(() => {
     clearDraft(date)
     setDraftStatus('saved')
+  }, [date])
+
+  // Save immediately when tab is hidden (mobile tab-switch / screen lock)
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.hidden && timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+        if (entryRef.current) {
+          saveDraft(date, entryRef.current)
+          setDraftStatus('saved')
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [date])
 
   useEffect(() => {
