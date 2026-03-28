@@ -1,4 +1,5 @@
 import { todayISO, daysAgo, getDayOfWeek, DIAS_CURTO } from './dateUtils'
+import { ACHIEVEMENT_BADGES, getUnlockedBadges } from './humor'
 
 // ─── Streaks ─────────────────────────────────────────
 export function calculateStreak(entries) {
@@ -166,4 +167,82 @@ export function getMoodData(entries) {
     timeline,
     distribution: Object.entries(distribution).map(([mood, count]) => ({ mood, count })),
   }
+}
+
+// ─── Next Badge Progress ─────────────────────────────
+/** Returns { badge, progress (0–1) } for the locked badge closest to unlocking */
+export function getNextBadgeProgress(entries) {
+  const unlocked = new Set(getUnlockedBadges(entries).map(b => b.id))
+  const locked = ACHIEVEMENT_BADGES.filter(b => !unlocked.has(b.id))
+  if (!locked.length) return null
+
+  const totalTodos = entries.reduce((s, e) => s + (e.todos || []).length, 0)
+  const totalConquistas = entries.reduce((s, e) => s + (e.conquistas || []).length, 0)
+  const streak = calculateStreak(entries)
+  const pesquisaStreak = _currentFieldStreak(entries, 'pesquisa')
+  const devStreak = _currentFieldStreak(entries, 'dev')
+  const goodDays = entries.filter(e => {
+    const t = e.todos || []
+    return t.length >= 3 && t.filter(x => x.done).length / t.length >= 0.9
+  }).length
+
+  const withProgress = locked.map(badge => {
+    let progress = 0
+    switch (badge.id) {
+      case 'primeiro_broto':      progress = Math.min(entries.length, 1); break
+      case 'queimada_produtiva': { const best = Math.max(0, ...entries.map(e => (e.todos||[]).filter(t=>t.done).length)); progress = Math.min(best / 10, 1); break }
+      case 'desmatador_papers':   progress = Math.min(pesquisaStreak / 7, 1); break
+      case 'cartografo_caos':     progress = Math.min(entries.length / 30, 1); break
+      case 'sobrevivente_caatinga': progress = 0.05; break
+      case 'mare_alta': { const best = Math.max(0, ...entries.map(e => (e.conquistas||[]).length)); progress = Math.min(best / 5, 1); break }
+      case 'bio_diverso': { const best = Math.max(0, ...entries.map(e => [(e.todos||[]).length>0,!!e.pesquisa,!!e.dev,!!e.notas,(e.conquistas||[]).length>0].filter(Boolean).length)); progress = Math.min(best / 5, 1); break }
+      case 'full_stack_flora':    progress = Math.min(entries.filter(e => e.dev && e.dev.length > 10).length / 10, 1); break
+      case 'gps_humano':          progress = Math.min(streak / 10, 1); break
+      case 'ipcc_pessoal':        progress = Math.min(entries.length / 50, 1); break
+      case 'escritor_romances': { const best = Math.max(0, ...entries.map(e => (e.pesquisa||'').length)); progress = Math.min(best / 500, 1); break }
+      case 'resiliente':          progress = 0.05; break
+      case 'maratonista_notas':   progress = Math.min(entries.length / 100, 1); break
+      case 'catador_tarefas':     progress = Math.min(totalTodos / 100, 1); break
+      case 'pesquisador_ironico': progress = Math.min(pesquisaStreak / 14, 1); break
+      case 'dev_incansavel':      progress = Math.min(devStreak / 7, 1); break
+      case 'semana_perfeita':     progress = 0.05; break
+      case 'conquistador_serial': progress = Math.min(totalConquistas / 50, 1); break
+      case 'veterano_pampa':      progress = Math.min(entries.length / 200, 1); break
+      case 'arqueiro_bioma':      progress = Math.min(goodDays / 10, 1); break
+      default:                    progress = 0
+    }
+    return { badge, progress }
+  })
+
+  return withProgress.filter(p => p.progress < 1).sort((a, b) => b.progress - a.progress)[0] || null
+}
+
+function _currentFieldStreak(entries, field) {
+  const sorted = [...entries]
+    .filter(e => e[field] && e[field].length > 5)
+    .sort((a, b) => b.date.localeCompare(a.date))
+  if (!sorted.length) return 0
+  let streak = 1
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i].date)
+    const curr = new Date(sorted[i - 1].date)
+    const diff = (curr - prev) / (1000 * 60 * 60 * 24)
+    if (diff === 1) streak++
+    else break
+  }
+  return streak
+}
+
+// ─── Weekly Digest ───────────────────────────────────
+/** Returns summary of the last 7 days */
+export function getWeeklyDigest(entries) {
+  const cutoff = daysAgo(6)
+  const week = entries.filter(e => e.date >= cutoff)
+  const todosCreated = week.reduce((s, e) => s + (e.todos || []).length, 0)
+  const todosDone = week.reduce((s, e) => s + (e.todos || []).filter(t => t.done).length, 0)
+  const conquistas = week.reduce((s, e) => s + (e.conquistas || []).length, 0)
+  const moodCount = {}
+  week.forEach(e => { if (e.mood) moodCount[e.mood] = (moodCount[e.mood] || 0) + 1 })
+  const topMood = Object.entries(moodCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null
+  return { entryCount: week.length, todosCreated, todosDone, conquistas, topMood }
 }

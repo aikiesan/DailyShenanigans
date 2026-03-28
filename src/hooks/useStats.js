@@ -8,6 +8,7 @@ import {
   getTodoStats,
   getWordCloud,
   getMoodData,
+  getNextBadgeProgress,
 } from '../utils/statsCalculations'
 import { getUnlockedBadges } from '../utils/humor'
 
@@ -23,6 +24,7 @@ export function useStats() {
     const wordCloud = getWordCloud(entries)
     const moodData = getMoodData(entries)
     const badges = getUnlockedBadges(entries)
+    const nextBadge = getNextBadgeProgress(entries)
 
     return {
       streak,
@@ -33,6 +35,7 @@ export function useStats() {
       wordCloud,
       moodData,
       badges,
+      nextBadge,
       totalEntries: entries.length,
     }
   }, [entries])

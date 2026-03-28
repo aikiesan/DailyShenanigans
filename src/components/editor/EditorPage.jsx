@@ -1,10 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useEntries } from '../../hooks/useEntries'
 import { useDraft } from '../../hooks/useDraft'
 import { useToast } from '../shared/Toast'
 import { formatDatePT, daysAgo } from '../../utils/dateUtils'
-import { randomFrom, SAVE_MESSAGES } from '../../utils/humor'
+import { randomFrom, SAVE_MESSAGES, getDailyPrompt } from '../../utils/humor'
 import TodoSection from './TodoSection'
 import PesquisaSection from './PesquisaSection'
 import DevSection from './DevSection'
@@ -13,6 +13,7 @@ import ConquistasSection from './ConquistasSection'
 import MoodPicker from './MoodPicker'
 import DraftStatus from './DraftStatus'
 import CapybaraReaction from '../shared/CapybaraReaction'
+import Confetti from '../shared/Confetti'
 
 export default function EditorPage() {
   const { date } = useParams()
@@ -28,6 +29,8 @@ export default function EditorPage() {
     if (existing) return existing
     return createEmptyEntry(date)
   })
+  const [promptDismissed, setPromptDismissed] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
 
   const updateField = useCallback((field, value) => {
     setEntry(prev => {
@@ -111,10 +114,37 @@ export default function EditorPage() {
     })
   }, [getEntry, scheduleAutoSave, showToast])
 
-  // Determine capybara state
+  // Confetti when all todos completed (≥3)
+  const prevAllDoneRef = useRef(false)
   const todosDone = (entry.todos || []).filter(t => t.done).length
   const todosTotal = (entry.todos || []).length
   const allDone = todosTotal > 0 && todosDone === todosTotal
+
+  useEffect(() => {
+    if (allDone && todosTotal >= 3 && !prevAllDoneRef.current) {
+      setShowConfetti(true)
+    }
+    prevAllDoneRef.current = allDone && todosTotal >= 3
+  }, [allDone, todosTotal])
+
+  // Completeness ring: 1 point per section filled
+  const completeness = [
+    !!entry.mood,
+    (entry.todos || []).length > 0,
+    (entry.pesquisa || '').length > 10,
+    (entry.dev || '').length > 10,
+    (entry.notas || '').length > 10,
+    (entry.conquistas || []).length > 0,
+  ].filter(Boolean).length
+
+  const circumference = 119
+  const ringColor = completeness === 0 ? '#e5e7eb' : completeness <= 2 ? '#f0b429' : completeness <= 4 ? '#66bb6a' : '#689f38'
+  const ringOffset = circumference * (1 - completeness / 6)
+
+  // Daily prompt (hidden once user starts writing)
+  const dailyPrompt = getDailyPrompt(date)
+  const showPrompt = !promptDismissed && !(entry.pesquisa || '').trim() && !(entry.notas || '').trim()
+
   const hasContent = entry.pesquisa || entry.dev || entry.notas
   const capyState = allDone ? 'happy' : hasContent ? 'working' : 'idle'
 
@@ -136,6 +166,24 @@ export default function EditorPage() {
             </h2>
           </div>
           <div className="flex items-center gap-3">
+            {/* Completeness ring */}
+            <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
+              <svg width="48" height="48" className="absolute inset-0">
+                <circle cx="24" cy="24" r="19" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                <circle
+                  cx="24" cy="24" r="19" fill="none"
+                  stroke={ringColor} strokeWidth="3"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={ringOffset}
+                  strokeLinecap="round"
+                  transform="rotate(-90 24 24)"
+                  style={{ transition: 'stroke-dashoffset 0.5s ease, stroke 0.3s ease' }}
+                />
+              </svg>
+              <span className="text-xs font-bold" style={{ color: ringColor }}>
+                {completeness}/6
+              </span>
+            </div>
             <CapybaraReaction state={capyState} size="sm" showText={false} />
             <div className="flex gap-2">
               <button
@@ -154,6 +202,24 @@ export default function EditorPage() {
           </div>
         </div>
       </div>
+
+      {/* Daily prompt banner — hidden once user starts writing */}
+      {showPrompt && (
+        <div className="bg-cerrado-50 border border-cerrado-200 rounded-xl px-4 py-3 flex items-start gap-3 fade-up">
+          <span className="text-lg flex-shrink-0">💬</span>
+          <div className="flex-1">
+            <span className="text-xs font-bold text-cerrado-600 uppercase tracking-wide block mb-0.5">Prompt do dia</span>
+            <p className="text-sm italic text-cerrado-700">{dailyPrompt}</p>
+          </div>
+          <button
+            onClick={() => setPromptDismissed(true)}
+            className="text-cerrado-400 hover:text-cerrado-600 transition-colors text-sm flex-shrink-0 mt-0.5"
+            aria-label="Fechar prompt"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Mood Picker */}
       <div className="fade-up fade-up-delay-1">
@@ -185,6 +251,9 @@ export default function EditorPage() {
 
       {/* Draft status bar */}
       <DraftStatus status={draftStatus} onSave={handleSave} />
+
+      {/* Confetti when all todos done */}
+      {showConfetti && <Confetti onDone={() => setShowConfetti(false)} />}
     </div>
   )
 }

@@ -204,3 +204,10 @@ body {
 .fade-up-delay-3 { animation-delay: 0.3s; opacity: 0; }
 .fade-up-delay-4 { animation-delay: 0.4s; opacity: 0; }
 .fade-up-delay-5 { animation-delay: 0.5s; opacity: 0; }
+
+/* Confetti */
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg);    opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}

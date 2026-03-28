@@ -1,5 +1,5 @@
 import { useStats } from '../../hooks/useStats'
-import { getStreakMessage } from '../../utils/humor'
+import { getStreakMessage, generateFunFacts } from '../../utils/humor'
 import ContributionHeatmap from './ContributionHeatmap'
 import CategoryBreakdown from './CategoryBreakdown'
 import TodoAnalytics from './TodoAnalytics'
@@ -17,11 +17,13 @@ export default function StatsPage() {
     wordCloud,
     moodData,
     badges,
+    nextBadge,
     totalEntries,
   } = useStats()
 
   const capyState = totalEntries === 0 ? 'sleepy' : streak >= 7 ? 'excited' : 'thinking'
   const streakMsg = getStreakMessage(streak)
+  const funFacts = generateFunFacts(wordCloud, todoStats, moodData, totalEntries)
 
   if (totalEntries === 0) {
     return (
@@ -63,7 +65,32 @@ export default function StatsPage() {
         <ContributionHeatmap data={heatmap} streak={streak} longestStreak={longestStreak} />
       </div>
 
-      {/* Badges */}
+      {/* Next badge progress */}
+      {nextBadge && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 fade-up fade-up-delay-2">
+          <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2 mb-3">
+            <span>🎯</span> Próxima Conquista
+          </h3>
+          <div className="flex items-center gap-4">
+            <span className="text-4xl flex-shrink-0">{nextBadge.badge.icon}</span>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm text-gray-800">{nextBadge.badge.name}</div>
+              <div className="text-xs text-gray-500 mb-2">{nextBadge.badge.desc}</div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-pampa-500 rounded-full transition-all duration-700"
+                  style={{ width: `${Math.round(nextBadge.progress * 100)}%` }}
+                />
+              </div>
+              <div className="text-xs text-pampa-600 mt-1 font-semibold">
+                {Math.round(nextBadge.progress * 100)}% concluído
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unlocked badges */}
       {badges.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 fade-up fade-up-delay-2">
           <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2 mb-4">
@@ -83,6 +110,23 @@ export default function StatsPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Fun facts */}
+      {funFacts.length > 0 && (
+        <div className="bg-pampa-50 rounded-2xl border border-pampa-200 p-6 fade-up fade-up-delay-2">
+          <h3 className="text-lg font-bold text-pampa-700 flex items-center gap-2 mb-4">
+            <span>📣</span> Seus Dados Falam
+          </h3>
+          <ul className="space-y-2">
+            {funFacts.map((fact, i) => (
+              <li key={i} className="text-sm italic text-pampa-600 flex items-start gap-2">
+                <span className="flex-shrink-0 mt-0.5">▸</span>
+                <span>{fact}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
