@@ -6,13 +6,21 @@ import { getMonthLabel } from '../../utils/dateUtils'
 import { generateMonthlyReport, getMonthBounds } from '../../utils/generateMonthlyReport'
 import CapybaraReaction from '../shared/CapybaraReaction'
 
-// Returns 'YYYY-MM' for each month from the earliest entry date through current month
-function getMonthRange(entries) {
-  if (entries.length === 0) return []
-  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
-  const earliest = sorted[0].date.slice(0, 7)
+// Returns 'YYYY-MM' for each month from the earliest source (entries or saved reports) through current month
+function getMonthRange(entries, reports) {
   const now = new Date()
   const current = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const candidates = []
+  if (entries.length > 0) {
+    const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
+    candidates.push(sorted[0].date.slice(0, 7))
+  }
+  if (reports.length > 0) {
+    const sorted = [...reports].sort((a, b) => a.month.localeCompare(b.month))
+    candidates.push(sorted[0].month)
+  }
+  if (candidates.length === 0) return []
+  const earliest = candidates.sort()[0]
   const months = []
   let [y, m] = earliest.split('-').map(Number)
   const [ey, em] = current.split('-').map(Number)
@@ -34,7 +42,7 @@ export default function MonthlyReportsPage() {
   const { entries } = useEntries()
   const navigate = useNavigate()
 
-  const months = useMemo(() => getMonthRange(entries), [entries])
+  const months = useMemo(() => getMonthRange(entries, reports), [entries, reports])
 
   // Pre-compute live stats for months that have entries but no saved report
   const monthCards = useMemo(() => {
@@ -47,7 +55,7 @@ export default function MonthlyReportsPage() {
     })
   }, [months, reports, entries])
 
-  if (entries.length === 0 && reports.length === 0) {
+  if (months.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 fade-up">
         <CapybaraReaction state="sleepy" size="xl" />
