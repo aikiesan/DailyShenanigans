@@ -72,4 +72,17 @@ export function getDateRange(startISO, endISO) {
   return dates
 }
 
+/** Returns the last day of a month as ISO string, e.g. '2026-04' → '2026-04-30' */
+export function getMonthLastDay(yearMonth) {
+  const [y, m] = yearMonth.split('-').map(Number)
+  const lastDay = new Date(y, m, 0).getDate()
+  return `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+}
+
+/** Returns full Portuguese month+year label, e.g. '2026-04' → 'Abril de 2026' */
+export function getMonthLabel(yearMonth) {
+  const [y, m] = yearMonth.split('-').map(Number)
+  return `${MESES[m - 1]} de ${y}`
+}
+
 export { MESES, MESES_CURTO, DIAS_SEMANA, DIAS_CURTO }

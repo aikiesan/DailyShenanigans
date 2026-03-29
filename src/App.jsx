@@ -5,6 +5,8 @@ import ArchivePage from './components/archive/ArchivePage'
 import EditorPage from './components/editor/EditorPage'
 import StatsPage from './components/stats/StatsPage'
 import AboutPage from './components/about/AboutPage'
+import MonthlyReportsPage from './components/reports/MonthlyReportsPage'
+import MonthlyReportDetail from './components/reports/MonthlyReportDetail'
 
 export default function App() {
   return (
@@ -16,6 +18,8 @@ export default function App() {
           <Route path="/entry/:date" element={<EditorPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/reports" element={<MonthlyReportsPage />} />
+          <Route path="/reports/:month" element={<MonthlyReportDetail />} />
         </Routes>
       </main>
       <Footer />
