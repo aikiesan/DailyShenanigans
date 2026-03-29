@@ -93,6 +93,24 @@ export function EntriesProvider({ children }) {
       .catch(() => setSupabaseStatus('error'))
   }, [isOnline]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Re-fetch from Supabase when tab becomes visible (cross-device sync)
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return
+    function handleVisibility() {
+      if (!document.hidden && initialSyncDone.current && isOnline) {
+        fetchAllEntries()
+          .then((remote) => {
+            if (remote.length > 0) {
+              setEntries(prev => mergeRemoteLocal(remote, prev))
+            }
+          })
+          .catch(() => {})
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [isOnline])
+
   // GitHub: pull on mount when token set
   useEffect(() => {
     if (!ghToken) return
