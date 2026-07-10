@@ -6,17 +6,22 @@ import { useToast } from '../shared/Toast'
 import { formatDatePT, daysAgo } from '../../utils/dateUtils'
 import { randomFrom, SAVE_MESSAGES, getDailyPrompt } from '../../utils/humor'
 import TodoSection from './TodoSection'
-import PesquisaSection from './PesquisaSection'
-import DevSection from './DevSection'
-import NotasSection from './NotasSection'
-import ConquistasSection from './ConquistasSection'
+import DiarioSection from './DiarioSection'
 import MoodPicker from './MoodPicker'
+import { withMergedDiario } from '../../utils/entryText'
 import DraftStatus from './DraftStatus'
 import CapybaraReaction from '../shared/CapybaraReaction'
 import Confetti from '../shared/Confetti'
 
+// Remount the editor whenever the date param changes — otherwise navigating
+// straight from one entry to another (e.g. bottom-nav "Hoje") keeps the
+// previous day's state and could overwrite the wrong entry.
 export default function EditorPage() {
   const { date } = useParams()
+  return <EditorForDate key={date} date={date} />
+}
+
+function EditorForDate({ date }) {
   const navigate = useNavigate()
   const { getEntry, upsertEntry, deleteEntry, createEmptyEntry } = useEntries()
   const { draftStatus, loadExistingDraft, scheduleAutoSave, saveNow, discardDraft } = useDraft(date)
@@ -24,13 +29,17 @@ export default function EditorPage() {
 
   const [entry, setEntry] = useState(() => {
     const draft = loadExistingDraft()
-    if (draft) return draft
+    if (draft) return withMergedDiario(draft)
     const existing = getEntry(date)
-    if (existing) return existing
+    if (existing) return withMergedDiario(existing)
     return createEmptyEntry(date)
   })
   const [promptDismissed, setPromptDismissed] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+
+  // Latest entry for save handlers — avoids setState-in-render via setEntry updaters
+  const entryRef = useRef(entry)
+  useEffect(() => { entryRef.current = entry })
 
   const updateField = useCallback((field, value) => {
     setEntry(prev => {
@@ -41,12 +50,10 @@ export default function EditorPage() {
   }, [scheduleAutoSave])
 
   const handleSave = useCallback(() => {
-    setEntry(current => {
-      upsertEntry(current)
-      saveNow(current)
-      discardDraft()
-      return current
-    })
+    const current = entryRef.current
+    upsertEntry(current)
+    saveNow(current)
+    discardDraft()
     showToast(randomFrom(SAVE_MESSAGES))
   }, [upsertEntry, saveNow, discardDraft, showToast])
 
@@ -88,30 +95,29 @@ export default function EditorPage() {
   }, [handleSave, handleBack])
 
   const carryForwardTodos = useCallback(() => {
-    setEntry(current => {
-      const existingTexts = new Set((current.todos || []).map(t => t.text))
-      const carried = []
-      for (let i = 1; i <= 7; i++) {
-        const pastEntry = getEntry(daysAgo(i))
-        if (!pastEntry) continue
-        const incomplete = (pastEntry.todos || []).filter(t => !t.done)
-        for (const t of incomplete) {
-          if (!existingTexts.has(t.text)) {
-            existingTexts.add(t.text)
-            carried.push({ text: t.text, done: false })
-          }
+    const current = entryRef.current
+    const existingTexts = new Set((current.todos || []).map(t => t.text))
+    const carried = []
+    for (let i = 1; i <= 7; i++) {
+      const pastEntry = getEntry(daysAgo(i))
+      if (!pastEntry) continue
+      const incomplete = (pastEntry.todos || []).filter(t => !t.done)
+      for (const t of incomplete) {
+        if (!existingTexts.has(t.text)) {
+          existingTexts.add(t.text)
+          carried.push({ text: t.text, done: false })
         }
-        if (carried.length > 0) break
       }
-      if (carried.length > 0) {
-        const next = { ...current, todos: [...(current.todos || []), ...carried] }
-        scheduleAutoSave(next)
-        showToast(`${carried.length} tarefa${carried.length > 1 ? 's' : ''} trazida${carried.length > 1 ? 's' : ''} 📋`)
-        return next
-      }
+      if (carried.length > 0) break
+    }
+    if (carried.length > 0) {
+      const next = { ...current, todos: [...(current.todos || []), ...carried] }
+      setEntry(next)
+      scheduleAutoSave(next)
+      showToast(`${carried.length} tarefa${carried.length > 1 ? 's' : ''} trazida${carried.length > 1 ? 's' : ''} 📋`)
+    } else {
       showToast('Nenhuma tarefa incompleta encontrada nos últimos 7 dias')
-      return current
-    })
+    }
   }, [getEntry, scheduleAutoSave, showToast])
 
   // Confetti when all todos completed (≥3)
@@ -131,21 +137,18 @@ export default function EditorPage() {
   const completeness = [
     !!entry.mood,
     (entry.todos || []).length > 0,
-    (entry.pesquisa || '').length > 10,
-    (entry.dev || '').length > 10,
-    (entry.notas || '').length > 10,
-    (entry.conquistas || []).length > 0,
+    (entry.diario || '').trim().length > 10,
   ].filter(Boolean).length
 
   const circumference = 119
-  const ringColor = completeness === 0 ? '#e5e7eb' : completeness <= 2 ? '#f0b429' : completeness <= 4 ? '#66bb6a' : '#689f38'
-  const ringOffset = circumference * (1 - completeness / 6)
+  const ringColor = completeness === 0 ? '#e5e7eb' : completeness === 1 ? '#f0b429' : completeness === 2 ? '#66bb6a' : '#689f38'
+  const ringOffset = circumference * (1 - completeness / 3)
 
   // Daily prompt (hidden once user starts writing)
   const dailyPrompt = getDailyPrompt(date)
-  const showPrompt = !promptDismissed && !(entry.pesquisa || '').trim() && !(entry.notas || '').trim()
+  const showPrompt = !promptDismissed && !(entry.diario || '').trim()
 
-  const hasContent = entry.pesquisa || entry.dev || entry.notas
+  const hasContent = (entry.diario || '').trim()
   const capyState = allDone ? 'happy' : hasContent ? 'working' : 'idle'
 
   return (
@@ -181,7 +184,7 @@ export default function EditorPage() {
                 />
               </svg>
               <span className="text-xs font-bold" style={{ color: ringColor }}>
-                {completeness}/6
+                {completeness}/3
               </span>
             </div>
             <CapybaraReaction state={capyState} size="sm" showText={false} />
@@ -228,24 +231,15 @@ export default function EditorPage() {
 
       {/* Sections */}
       <div className="space-y-5">
-        <div className="fade-up fade-up-delay-1">
+        <div className="fade-up fade-up-delay-2">
+          <DiarioSection value={entry.diario || ''} onChange={v => updateField('diario', v)} />
+        </div>
+        <div className="fade-up fade-up-delay-3">
           <TodoSection
             todos={entry.todos || []}
             onChange={v => updateField('todos', v)}
             onCarryForward={carryForwardTodos}
           />
-        </div>
-        <div className="fade-up fade-up-delay-2">
-          <PesquisaSection value={entry.pesquisa || ''} onChange={v => updateField('pesquisa', v)} />
-        </div>
-        <div className="fade-up fade-up-delay-3">
-          <DevSection value={entry.dev || ''} onChange={v => updateField('dev', v)} />
-        </div>
-        <div className="fade-up fade-up-delay-4">
-          <NotasSection value={entry.notas || ''} onChange={v => updateField('notas', v)} />
-        </div>
-        <div className="fade-up fade-up-delay-5">
-          <ConquistasSection conquistas={entry.conquistas || []} onChange={v => updateField('conquistas', v)} />
         </div>
       </div>
 

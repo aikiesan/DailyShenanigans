@@ -18,9 +18,12 @@ export function generateMonthlyReport(entries, yearMonth) {
   const longestStreak = calculateLongestStreak(monthEntries)
 
   const conquistasList = monthEntries.flatMap(e => e.conquistas || [])
-  const pesquisaChars = monthEntries.reduce((s, e) => s + (e.pesquisa || '').length, 0)
-  const devChars = monthEntries.reduce((s, e) => s + (e.dev || '').length, 0)
-  const notasChars = monthEntries.reduce((s, e) => s + (e.notas || '').length, 0)
+  // diario wins per entry; legacy fields only counted for pre-migration entries
+  const hasD = e => !!(e.diario && e.diario.trim())
+  const diarioChars = monthEntries.reduce((s, e) => s + (hasD(e) ? e.diario.trim().length : 0), 0)
+  const pesquisaChars = monthEntries.reduce((s, e) => s + (hasD(e) ? 0 : (e.pesquisa || '').length), 0)
+  const devChars = monthEntries.reduce((s, e) => s + (hasD(e) ? 0 : (e.dev || '').length), 0)
+  const notasChars = monthEntries.reduce((s, e) => s + (hasD(e) ? 0 : (e.notas || '').length), 0)
 
   // Build mood distribution as object {'😄': 5, ...}
   const moodDistribution = {}
@@ -44,6 +47,7 @@ export function generateMonthlyReport(entries, yearMonth) {
     mood_distribution: moodDistribution,
     top_mood: topMood,
     word_cloud: wordCloud,
+    diario_chars: diarioChars,
     pesquisa_chars: pesquisaChars,
     dev_chars: devChars,
     notas_chars: notasChars,
@@ -92,7 +96,7 @@ export function buildNarrative(report, yearMonth) {
     lines.push(`🔥 Maior sequência do mês: ${report.longest_streak} dias consecutivos.`)
   }
 
-  const totalChars = report.pesquisa_chars + report.dev_chars + report.notas_chars
+  const totalChars = (report.diario_chars || 0) + report.pesquisa_chars + report.dev_chars + report.notas_chars
   if (totalChars > 0) {
     lines.push(`✍️ ${totalChars.toLocaleString('pt-BR')} caracteres escritos no total.`)
   }

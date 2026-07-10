@@ -5,6 +5,7 @@ import SyncStatus from '../shared/SyncStatus'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Arquivo', icon: '🗂️' },
+  { to: '/treino', label: 'Treino', icon: '💪' },
   { to: '/stats', label: 'Estatísticas', icon: '📊' },
   { to: '/reports', label: 'Relatórios', icon: '📅' },
   { to: '/about', label: 'Sobre', icon: '🦫' },

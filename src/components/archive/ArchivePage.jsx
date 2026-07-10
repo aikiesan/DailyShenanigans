@@ -79,7 +79,7 @@ export default function ArchivePage() {
       const q = searchQuery.toLowerCase()
       result = result.filter(e => {
         const text = [
-          e.pesquisa, e.dev, e.notas,
+          e.diario, e.pesquisa, e.dev, e.notas,
           ...(e.conquistas || []),
           ...(e.todos || []).map(t => t.text),
         ].filter(Boolean).join(' ').toLowerCase()
@@ -255,7 +255,7 @@ export default function ArchivePage() {
               {flashbacks.map(({ label, entry: e }) => {
                 const todos = e.todos || []
                 const done = todos.filter(t => t.done).length
-                const preview = (e.pesquisa || e.dev || e.notas || '').slice(0, 70)
+                const preview = (e.diario || e.pesquisa || e.dev || e.notas || '').slice(0, 70)
                 return (
                   <button
                     key={e.date}

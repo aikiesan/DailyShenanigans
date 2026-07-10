@@ -88,9 +88,13 @@ export const DAILY_PROMPTS = [
 ]
 
 // ─── Private helpers ──────────────────────────────────
+// Writing streaks: with the single-diary format, any long-form text
+// that day (diario or legacy fields) keeps the streak alive.
 function hasStreakInField(entries, field, days) {
   if (entries.length < days) return false
-  const sorted = [...entries].filter(e => e[field] && e[field].length > 5).sort((a, b) => a.date.localeCompare(b.date))
+  const sorted = [...entries]
+    .filter(e => (e[field] && e[field].length > 5) || (e.diario && e.diario.trim().length > 5))
+    .sort((a, b) => a.date.localeCompare(b.date))
   let streak = 1
   for (let i = 1; i < sorted.length; i++) {
     const prev = new Date(sorted[i - 1].date)
@@ -128,7 +132,7 @@ function hasPerfectWeek(entries) {
     let ok = true
     for (let j = 0; j < 7; j++) {
       const e = sorted[i + j]
-      const perfect = e.mood && (e.todos || []).length > 0 && e.pesquisa && e.dev && e.notas && (e.conquistas || []).length > 0
+      const perfect = e.mood && (e.todos || []).length > 0 && ((e.diario && e.diario.trim().length > 10) || (e.pesquisa && e.dev && e.notas))
       if (!perfect) { ok = false; break }
       if (j > 0) {
         const prev = new Date(sorted[i + j - 1].date)
@@ -160,12 +164,12 @@ export const ACHIEVEMENT_BADGES = [
   { id: 'cartografo_caos', icon: '🗺️', name: 'Cartógrafo do Caos', desc: '30 entradas totais', check: (entries) => entries.length >= 30 },
   { id: 'sobrevivente_caatinga', icon: '🦎', name: 'Sobrevivente da Caatinga', desc: 'Fez entrada no fim de semana', check: (entries) => entries.some(e => { const d = new Date(e.date); return d.getDay() === 0 || d.getDay() === 6 }) },
   { id: 'mare_alta', icon: '🌊', name: 'Maré Alta no Pantanal', desc: '5+ conquistas em um dia', check: (entries) => entries.some(e => (e.conquistas || []).length >= 5) },
-  { id: 'bio_diverso', icon: '🦜', name: 'Biodiversidade Acadêmica', desc: 'Preencheu todas as 5 seções em um dia', check: (entries) => entries.some(e => (e.todos || []).length > 0 && e.pesquisa && e.dev && e.notas && (e.conquistas || []).length > 0) },
-  { id: 'full_stack_flora', icon: '🌺', name: 'Full Stack Flora', desc: '10 dias de código registrados', check: (entries) => entries.filter(e => e.dev && e.dev.length > 10).length >= 10 },
+  { id: 'bio_diverso', icon: '🦜', name: 'Biodiversidade Acadêmica', desc: 'Humor + tarefas + diário em um mesmo dia', check: (entries) => entries.some(e => e.mood && (e.todos || []).length > 0 && ((e.diario || '').trim().length > 10 || (e.pesquisa && e.dev && e.notas))) },
+  { id: 'full_stack_flora', icon: '🌺', name: 'Full Stack Flora', desc: '10 dias de escrita registrados', check: (entries) => entries.filter(e => (e.dev && e.dev.length > 10) || (e.diario && e.diario.trim().length > 10)).length >= 10 },
   { id: 'gps_humano', icon: '🛰️', name: 'GPS Humano', desc: 'Nunca perdeu um dia útil em 2 semanas', check: (entries) => hasWeekdayStreak(entries, 10) },
   { id: 'ipcc_pessoal', icon: '📊', name: 'IPCC Pessoal', desc: 'Mais de 50 entradas', check: (entries) => entries.length >= 50 },
   // Phase 2A — new badges
-  { id: 'escritor_romances', icon: '📖', name: 'Escritor de Romances', desc: 'Escreveu 500+ chars de pesquisa em um dia', check: (entries) => entries.some(e => (e.pesquisa || '').length >= 500) },
+  { id: 'escritor_romances', icon: '📖', name: 'Escritor de Romances', desc: 'Escreveu 500+ chars em um dia', check: (entries) => entries.some(e => (e.diario || e.pesquisa || '').length >= 500) },
   { id: 'resiliente', icon: '🌵', name: 'Resiliente', desc: 'Voltou depois de 3+ dias de pausa', check: (entries) => hasGapAndReturn(entries) },
   { id: 'maratonista_notas', icon: '🏃', name: 'Maratonista de Notas', desc: '100 entradas totais', check: (entries) => entries.length >= 100 },
   { id: 'catador_tarefas', icon: '📋', name: 'Catador de Tarefas', desc: '100 tarefas criadas ao total', check: (entries) => entries.reduce((s, e) => s + (e.todos || []).length, 0) >= 100 },
