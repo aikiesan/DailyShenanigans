@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useEntries } from '../../hooks/useEntries'
+import { useWorkouts } from '../../hooks/useWorkouts'
+import { downloadMarkdownExport } from '../../utils/exportMarkdown'
 import { todayISO, daysAgo, formatDateShort } from '../../utils/dateUtils'
 import { calculateStreak } from '../../utils/statsCalculations'
 import { getWeeklyDigest } from '../../utils/statsCalculations'
@@ -16,6 +18,7 @@ const MOOD_OPTIONS = ['😄', '😊', '😐', '😔', '😫']
 
 export default function ArchivePage() {
   const { entries, exportJSON, importJSON, upsertEntry, createEmptyEntry, getEntry } = useEntries()
+  const { workouts } = useWorkouts()
   const navigate = useNavigate()
   const showToast = useToast()
   const streak = useMemo(() => calculateStreak(entries), [entries])
@@ -110,6 +113,11 @@ export default function ArchivePage() {
     showToast(randomFrom(SAVE_MESSAGES))
   }
 
+  function handleExportMarkdown() {
+    downloadMarkdownExport(entries, workouts)
+    showToast('Backlog completo exportado em Markdown! 📝')
+  }
+
   function handleDatePick(e) {
     const val = e.target.value
     if (val) navigate(`/entry/${val}`)
@@ -186,6 +194,13 @@ export default function ArchivePage() {
                 className="bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-600 font-semibold px-4 py-2.5 rounded-xl transition-all hover:bg-gray-50"
               >
                 📤 Exportar
+              </button>
+              <button
+                onClick={handleExportMarkdown}
+                title="Exporta diário + treinos em um único Markdown cronológico, ideal para dar ao Claude organizar a linha do tempo"
+                className="bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-600 font-semibold px-4 py-2.5 rounded-xl transition-all hover:bg-gray-50"
+              >
+                📝 Backlog MD
               </button>
             </div>
 
