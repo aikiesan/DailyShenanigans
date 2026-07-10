@@ -1,22 +1,26 @@
 import { Link } from 'react-router-dom'
 import { formatDateShort, formatDatePT, getDayNumber, formatMonthShort } from '../../utils/dateUtils'
+import { entryText, hasDiario } from '../../utils/entryText'
 
 export default function EntryCard({ entry }) {
   const todosDone = (entry.todos || []).filter(t => t.done).length
   const todosTotal = (entry.todos || []).length
   const conquistas = (entry.conquistas || []).length
-  const hasContent = entry.pesquisa || entry.dev || entry.notas
 
   // Determine which biomes have content
   const activeBiomes = []
   if (todosTotal > 0) activeBiomes.push({ color: 'bg-cerrado-400', label: 'Tarefas' })
-  if (entry.pesquisa) activeBiomes.push({ color: 'bg-amazonia-400', label: 'Pesquisa' })
-  if (entry.dev) activeBiomes.push({ color: 'bg-atlantica-400', label: 'Dev' })
-  if (entry.notas) activeBiomes.push({ color: 'bg-caatinga-400', label: 'Notas' })
+  if (hasDiario(entry)) {
+    activeBiomes.push({ color: 'bg-amazonia-400', label: 'Diário' })
+  } else {
+    if (entry.pesquisa) activeBiomes.push({ color: 'bg-amazonia-400', label: 'Pesquisa' })
+    if (entry.dev) activeBiomes.push({ color: 'bg-atlantica-400', label: 'Dev' })
+    if (entry.notas) activeBiomes.push({ color: 'bg-caatinga-400', label: 'Notas' })
+  }
   if (conquistas > 0) activeBiomes.push({ color: 'bg-pantanal-400', label: 'Conquistas' })
 
   // Preview text
-  const preview = entry.pesquisa || entry.dev || entry.notas || ''
+  const preview = entryText(entry)
   const previewText = preview.length > 80 ? preview.slice(0, 80) + '…' : preview
 
   return (

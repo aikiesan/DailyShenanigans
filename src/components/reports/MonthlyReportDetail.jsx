@@ -275,18 +275,19 @@ export default function MonthlyReportDetail() {
       </div>
 
       {/* Writing stats */}
-      {(report.pesquisa_chars > 0 || report.dev_chars > 0 || report.notas_chars > 0) && (
+      {((report.diario_chars || 0) > 0 || report.pesquisa_chars > 0 || report.dev_chars > 0 || report.notas_chars > 0) && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2 mb-4">
             <span>✍️</span> Produção escrita
           </h3>
           <div className="space-y-3">
             {[
-              { label: 'Pesquisa', value: report.pesquisa_chars, color: 'bg-amazonia-500' },
+              { label: 'Diário', value: report.diario_chars || 0, color: 'bg-amazonia-500' },
+              { label: 'Pesquisa', value: report.pesquisa_chars, color: 'bg-amazonia-400' },
               { label: 'Dev', value: report.dev_chars, color: 'bg-atlantica-500' },
               { label: 'Notas', value: report.notas_chars, color: 'bg-caatinga-500' },
             ].filter(s => s.value > 0).map(stat => {
-              const total = report.pesquisa_chars + report.dev_chars + report.notas_chars
+              const total = (report.diario_chars || 0) + report.pesquisa_chars + report.dev_chars + report.notas_chars
               const pct = total > 0 ? Math.round((stat.value / total) * 100) : 0
               return (
                 <div key={stat.label}>

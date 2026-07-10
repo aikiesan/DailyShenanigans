@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom'
 import App from './App'
 import { EntriesProvider } from './hooks/useEntries'
 import { MonthlyReportsProvider } from './hooks/useMonthlyReports'
+import { WorkoutsProvider } from './hooks/useWorkouts'
 import { ToastProvider } from './components/shared/Toast'
 import './index.css'
 
@@ -12,9 +13,11 @@ createRoot(document.getElementById('root')).render(
     <HashRouter>
       <EntriesProvider>
         <MonthlyReportsProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
+          <WorkoutsProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </WorkoutsProvider>
         </MonthlyReportsProvider>
       </EntriesProvider>
     </HashRouter>

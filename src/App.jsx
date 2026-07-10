@@ -1,8 +1,10 @@
 import { Routes, Route } from 'react-router-dom'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
+import BottomNav from './components/layout/BottomNav'
 import ArchivePage from './components/archive/ArchivePage'
 import EditorPage from './components/editor/EditorPage'
+import WorkoutPage from './components/workout/WorkoutPage'
 import StatsPage from './components/stats/StatsPage'
 import AboutPage from './components/about/AboutPage'
 import MonthlyReportsPage from './components/reports/MonthlyReportsPage'
@@ -12,10 +14,11 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col topo-bg">
       <Header />
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6 pb-24 md:pb-6">
         <Routes>
           <Route path="/" element={<ArchivePage />} />
           <Route path="/entry/:date" element={<EditorPage />} />
+          <Route path="/treino" element={<WorkoutPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/reports" element={<MonthlyReportsPage />} />
@@ -23,6 +26,7 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <BottomNav />
     </div>
   )
 }

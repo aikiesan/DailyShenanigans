@@ -1,5 +1,6 @@
 import { todayISO, daysAgo, getDayOfWeek, DIAS_CURTO } from './dateUtils'
 import { ACHIEVEMENT_BADGES, getUnlockedBadges } from './humor'
+import { entryText, hasDiario } from './entryText'
 
 // ─── Streaks ─────────────────────────────────────────
 export function calculateStreak(entries) {
@@ -53,24 +54,36 @@ export function getHeatmapData(entries, days = 365) {
 export function getEntryScore(entry) {
   let score = 0
   if (entry.todos?.length) score += entry.todos.filter(t => t.done).length
-  if (entry.pesquisa?.length > 10) score += 2
-  if (entry.dev?.length > 10) score += 2
-  if (entry.notas?.length > 10) score += 1
+  if (hasDiario(entry)) {
+    const len = entry.diario.trim().length
+    if (len > 10) score += 2
+    if (len > 300) score += 2
+    if (len > 800) score += 1
+  } else {
+    if (entry.pesquisa?.length > 10) score += 2
+    if (entry.dev?.length > 10) score += 2
+    if (entry.notas?.length > 10) score += 1
+  }
   if (entry.conquistas?.length) score += entry.conquistas.length
   return score
 }
 
 // ─── Category Breakdown ──────────────────────────────
 export function getCategoryBreakdown(entries) {
-  let pesquisa = 0, dev = 0, notas = 0, todos = 0, conquistas = 0
+  let diario = 0, pesquisa = 0, dev = 0, notas = 0, todos = 0, conquistas = 0
   entries.forEach(e => {
-    pesquisa += (e.pesquisa || '').length
-    dev += (e.dev || '').length
-    notas += (e.notas || '').length
+    if (hasDiario(e)) {
+      diario += e.diario.trim().length
+    } else {
+      pesquisa += (e.pesquisa || '').length
+      dev += (e.dev || '').length
+      notas += (e.notas || '').length
+    }
     todos += (e.todos || []).length * 20
     conquistas += (e.conquistas || []).length * 30
   })
   return [
+    { name: 'Diário', value: diario, biome: 'amazonia' },
     { name: 'Pesquisa', value: pesquisa, biome: 'amazonia' },
     { name: 'Dev', value: dev, biome: 'atlantica' },
     { name: 'Notas', value: notas, biome: 'caatinga' },
@@ -133,7 +146,7 @@ const PT_STOPWORDS = new Set([
 export function getWordCloud(entries, maxWords = 50) {
   const freq = new Map()
   entries.forEach(e => {
-    const text = [e.pesquisa, e.dev, e.notas, ...(e.conquistas || [])].filter(Boolean).join(' ')
+    const text = [entryText(e), ...(e.conquistas || [])].filter(Boolean).join(' ')
     const words = text.toLowerCase().replace(/[^\w\sáàâãéèêíìîóòôõúùûçñ]/g, '').split(/\s+/)
     words.forEach(w => {
       if (w.length > 2 && !PT_STOPWORDS.has(w)) {
@@ -195,11 +208,11 @@ export function getNextBadgeProgress(entries) {
       case 'cartografo_caos':     progress = Math.min(entries.length / 30, 1); break
       case 'sobrevivente_caatinga': progress = 0.05; break
       case 'mare_alta': { const best = Math.max(0, ...entries.map(e => (e.conquistas||[]).length)); progress = Math.min(best / 5, 1); break }
-      case 'bio_diverso': { const best = Math.max(0, ...entries.map(e => [(e.todos||[]).length>0,!!e.pesquisa,!!e.dev,!!e.notas,(e.conquistas||[]).length>0].filter(Boolean).length)); progress = Math.min(best / 5, 1); break }
-      case 'full_stack_flora':    progress = Math.min(entries.filter(e => e.dev && e.dev.length > 10).length / 10, 1); break
+      case 'bio_diverso': { const best = Math.max(0, ...entries.map(e => [!!e.mood, (e.todos||[]).length>0, entryText(e).trim().length>10].filter(Boolean).length)); progress = Math.min(best / 3, 1); break }
+      case 'full_stack_flora':    progress = Math.min(entries.filter(e => (e.dev && e.dev.length > 10) || (e.diario && e.diario.trim().length > 10)).length / 10, 1); break
       case 'gps_humano':          progress = Math.min(streak / 10, 1); break
       case 'ipcc_pessoal':        progress = Math.min(entries.length / 50, 1); break
-      case 'escritor_romances': { const best = Math.max(0, ...entries.map(e => (e.pesquisa||'').length)); progress = Math.min(best / 500, 1); break }
+      case 'escritor_romances': { const best = Math.max(0, ...entries.map(e => (e.diario || e.pesquisa || '').length)); progress = Math.min(best / 500, 1); break }
       case 'resiliente':          progress = 0.05; break
       case 'maratonista_notas':   progress = Math.min(entries.length / 100, 1); break
       case 'catador_tarefas':     progress = Math.min(totalTodos / 100, 1); break
@@ -219,7 +232,7 @@ export function getNextBadgeProgress(entries) {
 
 function _currentFieldStreak(entries, field) {
   const sorted = [...entries]
-    .filter(e => e[field] && e[field].length > 5)
+    .filter(e => (e[field] && e[field].length > 5) || (e.diario && e.diario.trim().length > 5))
     .sort((a, b) => b.date.localeCompare(a.date))
   if (!sorted.length) return 0
   let streak = 1

@@ -85,6 +85,7 @@ export function createEmptyEntry(date) {
     id: date,
     date,
     todos: [],
+    diario: '',
     pesquisa: '',
     dev: '',
     notas: '',
