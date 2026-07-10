@@ -81,6 +81,10 @@ body {
   font-family: var(--font-nunito);
   background-color: #faf7f2;
   min-height: 100vh;
+  /* Safety net: a single overflowing element must never make the whole
+     page horizontally scrollable on mobile (scrollable rows manage their
+     own overflow-x-auto). */
+  overflow-x: clip;
 }
 
 /* Topographic background pattern */

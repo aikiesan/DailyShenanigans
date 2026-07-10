@@ -142,7 +142,7 @@ export default function ArchivePage() {
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
         <div className="flex flex-col md:flex-row items-center gap-6">
           <CapybaraReaction state={capyState} size="lg" showText={false} />
-          <div className="text-center md:text-left flex-1">
+          <div className="text-center md:text-left flex-1 w-full min-w-0">
             <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800">
               {entries.length === 0
                 ? 'Boas-vindas ao Daily Shenanigans! 🌱'
