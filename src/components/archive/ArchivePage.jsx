@@ -9,6 +9,7 @@ import { getWeeklyDigest } from '../../utils/statsCalculations'
 import { getStreakMessage, randomFrom, SAVE_MESSAGES, getTimeGreeting } from '../../utils/humor'
 import { useToast } from '../shared/Toast'
 import EntryCard from './EntryCard'
+import WeekTracker from './WeekTracker'
 import CalendarHeatmap from './CalendarHeatmap'
 import EmptyState from '../shared/EmptyState'
 import CapybaraReaction from '../shared/CapybaraReaction'
@@ -253,6 +254,11 @@ export default function ArchivePage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Dia Completo tracker (diário + treino) */}
+      <div className="fade-up fade-up-delay-1">
+        <WeekTracker entries={entries} workouts={workouts} />
       </div>
 
       {/* "On this day" flashback */}

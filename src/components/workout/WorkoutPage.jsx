@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useWorkouts } from '../../hooks/useWorkouts'
 import { createEmptyWorkout } from '../../utils/workoutStorage'
 import { WORKOUT_CATEGORIES, STRETCHES, TOTAL_EXERCISES, countExercisesDone, countStretchesDone, isExerciseDone } from '../../utils/exercises'
 import { todayISO, formatDatePT } from '../../utils/dateUtils'
 import ExerciseIllustration from './ExerciseIllustration'
-import WorkoutProgress from './WorkoutProgress'
+
+// recharts is heavy — only download it when the Progresso tab is opened
+const WorkoutProgress = lazy(() => import('./WorkoutProgress'))
 
 const WELLNESS_LEVELS = [
   { value: 1, emoji: '😫', label: 'Dor forte' },
@@ -130,7 +132,9 @@ export default function WorkoutPage() {
       </div>
 
       {tab === 'progresso' ? (
-        <WorkoutProgress />
+        <Suspense fallback={<p className="text-center text-sm text-gray-400 py-10">Carregando gráficos... 📈</p>}>
+          <WorkoutProgress />
+        </Suspense>
       ) : (
         <>
           {/* Daily metrics */}

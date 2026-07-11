@@ -1,5 +1,8 @@
 import { useStats } from '../../hooks/useStats'
+import { useEntries } from '../../hooks/useEntries'
+import { useWorkouts } from '../../hooks/useWorkouts'
 import { getStreakMessage, generateFunFacts } from '../../utils/humor'
+import YearInNumbers from './YearInNumbers'
 import ContributionHeatmap from './ContributionHeatmap'
 import CategoryBreakdown from './CategoryBreakdown'
 import TodoAnalytics from './TodoAnalytics'
@@ -20,6 +23,8 @@ export default function StatsPage() {
     nextBadge,
     totalEntries,
   } = useStats()
+  const { entries } = useEntries()
+  const { workouts } = useWorkouts()
 
   const capyState = totalEntries === 0 ? 'sleepy' : streak >= 7 ? 'excited' : 'thinking'
   const streakMsg = getStreakMessage(streak)
@@ -58,6 +63,11 @@ export default function StatsPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Year in numbers */}
+      <div className="fade-up fade-up-delay-1">
+        <YearInNumbers entries={entries} workouts={workouts} />
       </div>
 
       {/* Heatmap */}
