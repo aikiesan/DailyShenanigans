@@ -2,6 +2,7 @@ import { useStats } from '../../hooks/useStats'
 import { useEntries } from '../../hooks/useEntries'
 import { useWorkouts } from '../../hooks/useWorkouts'
 import { getStreakMessage, generateFunFacts } from '../../utils/humor'
+import { getUnlockedWorkoutBadges } from '../../utils/workoutBadges'
 import YearInNumbers from './YearInNumbers'
 import ContributionHeatmap from './ContributionHeatmap'
 import CategoryBreakdown from './CategoryBreakdown'
@@ -25,6 +26,7 @@ export default function StatsPage() {
   } = useStats()
   const { entries } = useEntries()
   const { workouts } = useWorkouts()
+  const workoutBadges = getUnlockedWorkoutBadges(workouts, entries)
 
   const capyState = totalEntries === 0 ? 'sleepy' : streak >= 7 ? 'excited' : 'thinking'
   const streakMsg = getStreakMessage(streak)
@@ -100,8 +102,8 @@ export default function StatsPage() {
         </div>
       )}
 
-      {/* Unlocked badges */}
-      {badges.length > 0 && (
+      {/* Unlocked badges (diary + workout) */}
+      {(badges.length > 0 || workoutBadges.length > 0) && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 fade-up fade-up-delay-2">
           <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2 mb-4">
             <span>🏅</span> Conquistas Desbloqueadas
@@ -116,6 +118,18 @@ export default function StatsPage() {
                 <div>
                   <div className="font-bold text-sm text-pampa-700">{badge.name}</div>
                   <div className="text-xs text-pampa-500">{badge.desc}</div>
+                </div>
+              </div>
+            ))}
+            {workoutBadges.map(badge => (
+              <div
+                key={badge.id}
+                className="flex items-center gap-3 p-3 rounded-xl bg-amazonia-50 border border-amazonia-200"
+              >
+                <span className="text-2xl">{badge.icon}</span>
+                <div>
+                  <div className="font-bold text-sm text-amazonia-700">{badge.name}</div>
+                  <div className="text-xs text-amazonia-500">{badge.desc}</div>
                 </div>
               </div>
             ))}

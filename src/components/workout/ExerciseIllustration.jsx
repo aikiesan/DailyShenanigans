@@ -1,7 +1,6 @@
-// Ilustrações minimalistas (stick figure) de cada exercício.
-// Estilo: traço arredondado, cor herdada via currentColor.
-// Para trocar por fotos: coloque JPGs em public/exercises/<id>.jpg
-// e substitua este componente por <img>.
+// Visual de cada exercício: tenta a foto real em public/exercises/<id>.jpg
+// e cai para a ilustração stick-figure em SVG se a foto não existir.
+import { useState } from 'react'
 
 const Head = ({ cx, cy }) => <circle cx={cx} cy={cy} r="5.5" fill="currentColor" stroke="none" />
 
@@ -157,21 +156,39 @@ const DRAWINGS = {
 }
 
 export default function ExerciseIllustration({ id, className = '' }) {
+  const [photoState, setPhotoState] = useState('loading') // loading | ok | missing
   const drawing = DRAWINGS[id]
   if (!drawing) return null
+
+  const photoSrc = `${import.meta.env.BASE_URL}exercises/${id}.jpg`
+
   return (
-    <svg
-      viewBox="0 0 120 72"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <line x1="4" y1="66" x2="116" y2="66" opacity="0.18" strokeWidth="3" />
-      {drawing}
-    </svg>
+    <div className={className}>
+      {photoState !== 'missing' && (
+        <img
+          src={photoSrc}
+          alt=""
+          loading="lazy"
+          onLoad={() => setPhotoState('ok')}
+          onError={() => setPhotoState('missing')}
+          className={photoState === 'ok' ? 'w-full aspect-[5/3] object-cover rounded-lg' : 'hidden'}
+        />
+      )}
+      {photoState !== 'ok' && (
+        <svg
+          viewBox="0 0 120 72"
+          className="w-full"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="4" y1="66" x2="116" y2="66" opacity="0.18" strokeWidth="3" />
+          {drawing}
+        </svg>
+      )}
+    </div>
   )
 }
