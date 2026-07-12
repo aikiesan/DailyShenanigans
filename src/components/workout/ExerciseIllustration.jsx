@@ -164,14 +164,15 @@ export default function ExerciseIllustration({ id, className = '' }) {
 
   return (
     <div className={className}>
+      {/* no loading="lazy": a display:none image never enters the viewport,
+          so lazy would never fire onLoad and the photo would stay hidden */}
       {photoState !== 'missing' && (
         <img
           src={photoSrc}
           alt=""
-          loading="lazy"
           onLoad={() => setPhotoState('ok')}
           onError={() => setPhotoState('missing')}
-          className={photoState === 'ok' ? 'w-full aspect-[5/3] object-cover rounded-lg' : 'hidden'}
+          className={photoState === 'ok' ? 'w-full h-20 object-contain bg-white rounded-lg' : 'hidden'}
         />
       )}
       {photoState !== 'ok' && (

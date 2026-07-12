@@ -11,6 +11,7 @@ import { useToast } from '../shared/Toast'
 import EntryCard from './EntryCard'
 import WeekTracker from './WeekTracker'
 import PushReminderCard from './PushReminderCard'
+import LevelCard from '../shared/LevelCard'
 import CalendarHeatmap from './CalendarHeatmap'
 import EmptyState from '../shared/EmptyState'
 import CapybaraReaction from '../shared/CapybaraReaction'
@@ -41,6 +42,17 @@ export default function ArchivePage() {
   }, [entries.length, streak])
 
   const streakMsg = useMemo(() => getStreakMessage(streak), [streak])
+
+  // Streak at risk: no entry today, it's past 16h, and yesterday closed a streak
+  const streakAtRisk = useMemo(() => {
+    if (entries.some(e => e.date === todayISO())) return 0
+    if (new Date().getHours() < 16) return 0
+    const dates = new Set(entries.map(e => e.date))
+    let n = 0
+    let i = 1
+    while (dates.has(daysAgo(i))) { n++; i++ }
+    return n
+  }, [entries])
 
   // Confetti on streak milestones
   const prevStreakRef = useRef(streak)
@@ -255,6 +267,29 @@ export default function ArchivePage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Streak at risk warning */}
+      {streakAtRisk > 0 && (
+        <button
+          onClick={handleNewEntry}
+          className="w-full bg-gradient-to-r from-cerrado-400 to-caatinga-500 text-white rounded-2xl shadow-sm p-4 flex items-center gap-3 text-left transition-transform active:scale-[0.98] fade-up"
+        >
+          <span className="text-3xl flex-shrink-0 animate-pulse">🔥</span>
+          <div className="flex-1 min-w-0">
+            <div className="font-extrabold text-sm">
+              Sua sequência de {streakAtRisk} {streakAtRisk === 1 ? 'dia' : 'dias'} está em risco!
+            </div>
+            <div className="text-xs text-white/85 font-medium">
+              Registre hoje antes da meia-noite para não deixar a chama apagar. Toque aqui →
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* Level / XP */}
+      <div className="fade-up fade-up-delay-1">
+        <LevelCard entries={entries} workouts={workouts} />
       </div>
 
       {/* Dia Completo tracker (diário + treino) */}

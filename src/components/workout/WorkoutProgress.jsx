@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useWorkouts } from '../../hooks/useWorkouts'
 import { TOTAL_EXERCISES, STRETCHES, countExercisesDone, countStretchesDone } from '../../utils/exercises'
-import { daysAgo, formatDateShort, todayISO } from '../../utils/dateUtils'
+import { daysAgo, formatDateShort, formatDatePT, todayISO } from '../../utils/dateUtils'
 
 const PERIODS = [
   { days: 7, label: '7 dias' },
@@ -53,6 +53,37 @@ export default function WorkoutProgress() {
     return { daily, activeDays: activeDays.length, avgCompletion, streak, weightData, wellnessData }
   }, [workouts, period])
 
+  // All-time records (independent of the selected period)
+  const records = useMemo(() => {
+    const active = workouts.filter(w => countExercisesDone(w) > 0)
+    if (active.length === 0) return null
+
+    let bestDay = active[0]
+    for (const w of active) {
+      if (countExercisesDone(w) > countExercisesDone(bestDay)) bestDay = w
+    }
+
+    const dates = [...new Set(active.map(w => w.date))].sort()
+    let bestStreak = 0
+    let cur = 0
+    let prev = null
+    for (const d of dates) {
+      const [y, m, dd] = d.split('-').map(Number)
+      const [py, pm, pd] = prev ? prev.split('-').map(Number) : [0, 0, 0]
+      const diff = prev ? Math.round((new Date(y, m - 1, dd) - new Date(py, pm - 1, pd)) / 86400000) : 0
+      cur = diff === 1 ? cur + 1 : 1
+      bestStreak = Math.max(bestStreak, cur)
+      prev = d
+    }
+
+    return {
+      bestDayCount: countExercisesDone(bestDay),
+      bestDayDate: bestDay.date,
+      bestStreak,
+      totalDays: active.length,
+    }
+  }, [workouts])
+
   const hasAny = workouts.length > 0
 
   return (
@@ -94,6 +125,30 @@ export default function WorkoutProgress() {
               </div>
             ))}
           </div>
+
+          {/* All-time records */}
+          {records && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-3">🏆 Recordes</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-gray-500 font-medium">🥇 Melhor dia</span>
+                  <span className="font-bold text-gray-700 text-right">
+                    {records.bestDayCount}/{TOTAL_EXERCISES} exercícios
+                    <span className="block text-[11px] font-semibold text-gray-400">{formatDatePT(records.bestDayDate)}</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-gray-500 font-medium">🔥 Maior sequência</span>
+                  <span className="font-bold text-gray-700">{records.bestStreak} {records.bestStreak === 1 ? 'dia' : 'dias'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-gray-500 font-medium">📅 Total de treinos</span>
+                  <span className="font-bold text-gray-700">{records.totalDays}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Completion per day */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
