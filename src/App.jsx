@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { todayISO } from './utils/dateUtils'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
 import BottomNav from './components/layout/BottomNav'
@@ -31,6 +32,8 @@ export default function App() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<ArchivePage />} />
+            {/* Stable target for manifest shortcuts / notifications */}
+            <Route path="/hoje" element={<Navigate to={`/entry/${todayISO()}`} replace />} />
             <Route path="/entry/:date" element={<EditorPage />} />
             <Route path="/treino" element={<WorkoutPage />} />
             <Route path="/stats" element={<StatsPage />} />

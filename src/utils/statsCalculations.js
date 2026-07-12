@@ -1,6 +1,7 @@
-import { todayISO, daysAgo, getDayOfWeek, DIAS_CURTO } from './dateUtils'
-import { ACHIEVEMENT_BADGES, getUnlockedBadges } from './humor'
-import { entryText, hasDiario } from './entryText'
+// Explicit .js extensions: this module is also imported by Node scripts
+import { todayISO, daysAgo, getDayOfWeek, DIAS_CURTO } from './dateUtils.js'
+import { ACHIEVEMENT_BADGES, getUnlockedBadges } from './humor.js'
+import { entryText, hasDiario } from './entryText.js'
 
 // ─── Streaks ─────────────────────────────────────────
 export function calculateStreak(entries) {

@@ -30,6 +30,21 @@ export default defineConfig({
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Long-press the app icon → quick actions
+        shortcuts: [
+          {
+            name: 'Diário de hoje',
+            short_name: 'Hoje',
+            url: '/DailyShenanigans/#/hoje',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Treino',
+            short_name: 'Treino',
+            url: '/DailyShenanigans/#/treino',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }],
+          },
+        ],
       },
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
