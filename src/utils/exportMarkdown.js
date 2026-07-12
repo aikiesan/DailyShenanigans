@@ -1,6 +1,8 @@
-import { formatDatePT, getMonthLabel } from './dateUtils'
-import { entryText } from './entryText'
-import { ALL_EXERCISES, STRETCHES, TOTAL_EXERCISES, isExerciseDone } from './exercises'
+// Explicit .js extensions: this module also runs in plain Node
+// (scripts/export-backlog.mjs), which requires them.
+import { formatDatePT, getMonthLabel } from './dateUtils.js'
+import { entryText } from './entryText.js'
+import { ALL_EXERCISES, STRETCHES, TOTAL_EXERCISES, isExerciseDone } from './exercises.js'
 
 /**
  * Builds a single chronological Markdown document with ALL data

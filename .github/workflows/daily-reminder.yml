@@ -1,0 +1,22 @@
+name: Daily reminder push (18h BRT)
+
+on:
+  schedule:
+    # 18:00 America/Sao_Paulo = 21:00 UTC (BRT is UTC-3, no DST)
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save web-push@3
+      - run: node scripts/send-reminder.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
