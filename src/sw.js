@@ -14,6 +14,15 @@ precacheAndRoute(self.__WB_MANIFEST)
 // SPA navigation fallback
 registerRoute(new NavigationRoute(createHandlerBoundToURL('/DailyShenanigans/index.html')))
 
+// Exercise photos: cache after first view so they work offline
+registerRoute(
+  ({ request, url }) => request.destination === 'image' && url.pathname.includes('/exercises/'),
+  new CacheFirst({
+    cacheName: 'exercise-photos',
+    plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 * 180 })],
+  })
+)
+
 // Google Fonts
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.googleapis.com',

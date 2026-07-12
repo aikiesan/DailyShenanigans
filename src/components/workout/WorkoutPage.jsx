@@ -4,6 +4,8 @@ import { createEmptyWorkout } from '../../utils/workoutStorage'
 import { WORKOUT_CATEGORIES, STRETCHES, TOTAL_EXERCISES, countExercisesDone, countStretchesDone, isExerciseDone } from '../../utils/exercises'
 import { todayISO, formatDatePT } from '../../utils/dateUtils'
 import ExerciseIllustration from './ExerciseIllustration'
+import Confetti from '../shared/Confetti'
+import { useToast } from '../shared/Toast'
 
 // recharts is heavy — only download it when the Progresso tab is opened
 const WorkoutProgress = lazy(() => import('./WorkoutProgress'))
@@ -34,6 +36,8 @@ export default function WorkoutPage() {
   const { getWorkout, updateWorkout, status } = useWorkouts()
   const [date, setDate] = useState(todayISO())
   const [tab, setTab] = useState('treino')
+  const [showConfetti, setShowConfetti] = useState(false)
+  const showToast = useToast()
 
   const workout = getWorkout(date) || createEmptyWorkout(date)
   const isToday = date === todayISO()
@@ -42,19 +46,40 @@ export default function WorkoutPage() {
   const stretchesDone = countStretchesDone(workout)
 
   function tapExercise(exercise) {
+    // Celebration/haptics computed from the rendered workout (side effects
+    // must stay out of the state updater — StrictMode runs it twice)
+    const current = workout.exercises?.[exercise.id]?.sets || 0
+    const nextSets = current >= exercise.targetSets ? 0 : current + 1
+    if (nextSets >= exercise.targetSets) {
+      const preview = {
+        ...workout,
+        exercises: { ...workout.exercises, [exercise.id]: { sets: nextSets, done: true } },
+      }
+      if (countExercisesDone(preview) === TOTAL_EXERCISES) {
+        navigator.vibrate?.([60, 40, 60, 40, 120])
+        setShowConfetti(true)
+        showToast('TREINO COMPLETO! A lombar aplaude de pé 👏🦴')
+      } else {
+        navigator.vibrate?.(30)
+      }
+    } else if (nextSets > 0) {
+      navigator.vibrate?.(10)
+    }
+
     updateWorkout(date, prev => {
-      const current = prev.exercises?.[exercise.id]?.sets || 0
-      const nextSets = current >= exercise.targetSets ? 0 : current + 1
+      const sets = prev.exercises?.[exercise.id]?.sets || 0
+      const next = sets >= exercise.targetSets ? 0 : sets + 1
       return {
         exercises: {
           ...prev.exercises,
-          [exercise.id]: { sets: nextSets, done: nextSets >= exercise.targetSets },
+          [exercise.id]: { sets: next, done: next >= exercise.targetSets },
         },
       }
     })
   }
 
   function toggleStretch(id) {
+    if (!workout.stretches?.[id]) navigator.vibrate?.(10)
     updateWorkout(date, prev => ({
       stretches: { ...prev.stretches, [id]: !prev.stretches?.[id] },
     }))
@@ -289,6 +314,8 @@ export default function WorkoutPage() {
           </p>
         </>
       )}
+
+      {showConfetti && <Confetti onDone={() => setShowConfetti(false)} />}
     </div>
   )
 }
